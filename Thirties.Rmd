@@ -102,18 +102,82 @@ $$
 e_max <- function(n){
     e = 0
     for (x in 1:6) {
-        p1 <- (x-1)/6
-        p2 <- 1/6
-        e = e + x*((p1+p2)**n-p1**n)
+        Fx=x/6
+        fx=1/6
+        e = e + x*(Fx**n - (Fx-fx)**n)
     }
     return(e)
 }
 ```
 
 ```{r}
-e_maxima <- c()
-for (i in 1:6) {
-    e_maxima <- c(e_maxima, e_max(i))
+
+```
+
+```{r}
+turn_optimal <- function() {
+    
+    # We will compute expected maximal values for rolls with 1 to 6 dice
+    e_maxima <- c()
+    for (i in 1:6) {
+        e_maxima <- c(e_maxima, e_max(i))
+    }
+    
+    dice_in_game <- 6
+    final_hand <- c()
+  
+    # While we are still left with dice to throw, we will play
+    while (dice_in_game > 0) {
+    
+        throw <- sample.int(n = 6, size = dice_in_game, replace = TRUE)
+        initial_throw_size <- length(throw)
+        improvement_found <- TRUE
+        
+        # Now let's choose the dice to keep going from highest value down
+        while (improvement_found) {
+          
+            # Start with no expected improvement
+            improvement_found <- FALSE 
+          
+            if (length(throw) == 0) {
+                break
+            }
+          
+            # With more dice left in game, the threshold for keeping is higher
+            current_threshold <- e_maxima[length(throw)]
+            indices_to_keep <- which(throw >= current_threshold)
+          
+            # If we want actually want to keep any, we have found an improvement
+            if (length(indices_to_keep) > 0) {
+                improvement_found <- TRUE 
+                final_hand <- append(final_hand, throw[indices_to_keep])
+                throw <- throw[-indices_to_keep]
+            }
+        }
+        
+        # If we haven't found any sufficient values, we will bite the bullet and
+        # keep the highest value
+        if (length(throw) == initial_throw_size) {
+            max_index <- which.max(throw)
+            final_hand <- append(final_hand, throw[max_index])
+            throw <- throw[-max_index]
+        }
+        
+        dice_in_game <- length(throw)
+    }
+  
+    return(final_hand)
 }
-e_maxima[1]
+```
+
+```{r}
+results <- c()
+for (i in 1:10000) {
+    results <- append(results, sum(turn_optimal()))
+}
+
+
+hist(results)
+quantile(results)
+mean(results)
 ```
