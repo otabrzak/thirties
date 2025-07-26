@@ -79,18 +79,24 @@ turn <- function() {
 
 In the previous strategy, we only decided to keep sixes and fives. Could we improve our strategy by computing the expected value of the next turn based on number of dice kept? Let's try to estimate the maximal value thrown by n dice, since we only need to keep.
 
+If we denote the $k$th order statistic ($k$th lowest element in the sample) as $X_{(k)}$, the probability that the element will equal some value $x$ is computed as
+
 $$
-p_{1}=P(X<x)=F(x)-f(x),\\ p_{2}=P(X=x)=f(x),\\{\text{ and }}p_{3}=P(X>x)=1-F(x)
+{\displaystyle {\begin{aligned}P(X_{(k)}=x)&=\sum _{j=0}^{n-k}{n \choose j}\left((1-F(x))^{j}(F(x))^{n-j}-(1-F(x)+f(x))^{j}(F(x)-f(x))^{n-j}\right).\end{aligned}}}
 $$
 
-```{r}
-prob_max <- function(x, n){
-    p1 <- (x-1)/6
-    p2 <- 1/6
-    p3 <- 1-x/6
-    return((p1+p2)**n-p1**n)
-}
-```
+However, since we are looking for a maximum ($k=n$), we can simplify this formula. Let's denote three following values:\$\$\mathbf{p_{1}}=P(X\<x)=F(x)-f(x), \mathbf{p_{2}}=P(X=x)=f(x),{\text{ and }}\mathbf{p_{3}}=P(X\>x)=1-F(x).\
+
+Using these, we can transform the formula and simplify:
+
+$$
+{\displaystyle {\begin{aligned}P(X_{(k)}=x)&=\sum _{j=0}^{n-k}{n \choose j}\left((1-F(x))^{j}(F(x))^{n-j}-(1-F(x)+f(x))^{j}(F(x)-f(x))^{n-j}\right),\\&=\sum _{j=0}^{n-k}{n \choose j}\left(p_{3}^{j}(p_{1}+p_{2})^{n-j}-(p_{2}+p_{3})^{j}(p_{1})^{n-j}\right),\\&=\sum_{j=0}^{n-n}{n\choose 0} \left( p_3^0(p_1+p_2)^n- (p_2 + p_3)^0(p_1)^n\right),
+\\&=(p_1+p_2)^n-p_1^n,
+\\&=F(x)^n-\left(F(x)-f(x)\right)^n
+\\\end{aligned}}}
+$$
+
+\
 
 ```{r}
 e_max <- function(n){
@@ -102,7 +108,12 @@ e_max <- function(n){
     }
     return(e)
 }
+```
 
-e_max(3)
-
+```{r}
+e_maxima <- c()
+for (i in 1:6) {
+    e_maxima <- c(e_maxima, e_max(i))
+}
+e_maxima[1]
 ```
