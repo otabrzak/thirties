@@ -77,7 +77,7 @@ turn <- function() {
 
 # Order statistics
 
-In the previous strategy, we only decided to keep sixes and fives. Could we improve our strategy by computing the expected value of the next turn based on number of dice kept? Let's try to estimate the maximal value thrown by n dice, since we only need to keep.
+In the previous strategy, we only decided to keep sixes and fives. Could we improve our strategy by computing the expected value of the next turn based on number of dice kept? Let's try to estimate the maximal value thrown by n dice, since we only need to keep 1 die.
 
 If we denote the $k$th order statistic ($k$th lowest element in the sample) as $X_{(k)}$, the probability that the element will equal some value $x$ is computed as
 
@@ -85,7 +85,7 @@ $$
 {\displaystyle {\begin{aligned}P(X_{(k)}=x)&=\sum _{j=0}^{n-k}{n \choose j}\left((1-F(x))^{j}(F(x))^{n-j}-(1-F(x)+f(x))^{j}(F(x)-f(x))^{n-j}\right).\end{aligned}}}
 $$
 
-However, since we are looking for a maximum ($k=n$), we can simplify this formula. Let's denote three following values:\$\$\mathbf{p_{1}}=P(X\<x)=F(x)-f(x), \mathbf{p_{2}}=P(X=x)=f(x),{\text{ and }}\mathbf{p_{3}}=P(X\>x)=1-F(x).\
+However, since we are looking for a maximum ($k=n$), we can simplify this formula. Let's denote three following values: $$\mathbf{p_{1}}=P(X<x)=F(x)-f(x), \mathbf{p_{2}}=P(X=x)=f(x),{\text{ and }}\mathbf{p_{3}}=P(X\>x)=1-F(x).$$
 
 Using these, we can transform the formula and simplify:
 
