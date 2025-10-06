@@ -7,29 +7,23 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+options(scipen=10) # Print 0.00513 instead of 5.13e-03.
+
 ```
 
-## R Markdown
+# The rules of the game
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+For this game analysis, I will be using slightly modiffied rules of the dice game 30s. The rules go like this: player starts with 30 lives and the players take turns clockwise. At the start of a turn, a player gets 6 dice. The goal of a player's turn is to throw the highest sum of all dice, which can be 36 at best.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+The turn goes like this: the player throws all dice and has to set aside at least 1 of them. After he sets some dice aside (1 or more), he throws the rest of them again and repeats the process (sets at least 1 ř aside, throws the rest again), until there are no dice to throw and all are set aside. Since each throw contains at least 1 less die than the previous, the player can throw as many as 6 times in a turn.
 
-```{r cars}
-summary(cars)
-```
+After the final throw, the dice are summed up. If the result is lower than 30 (this is a recurring number in this game, as the name suggests), difference from 30 is subtracted from the player's lives (if I throw a 27, I lose 3 lives). If the result is higher than 30, the surplus over 30 is subtracted from the lives of the player on the left (if I throw a 35, the player on my left loses 5 lives). The last player with any lives left wins.
 
-## Including Plots
+The scoring is not too important in this analysis, let's just estabilish that we want to find a strategy, that gets us as much above 30 as possible (ideally as close to 36 as possible). Let's now try to find it!
 
-You can also embed plots, for example:
+# Simplest strategy
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.)
-
-# Turn simulation function
+Ok, a simple strategy would be to keep all the higher numbers and rethrow all the lower numbers. To keep it simple, let's set aside all 5's and 6's and look at what we get.
 
 ```{r}
 # This function simulates a player's turn
@@ -75,9 +69,21 @@ turn <- function() {
 }
 ```
 
+```{r}
+turn()
+```
+
+Now let's think about this for a minute. Imagine I throw a 5 in a last throw (only 1 die remaining). The expected value for the throw of 1 die is 3,5 and we scored much higher! Great.
+
+But now, what if I throw a 5 in my first throw (with all 6 dice). Is it a good result, or is it not? As we can see, it now gets a bit more complicated. After this first throw, I will have the opportunity to see 15 more dice thrown (5 + 4 + 3 + 2 +1) and there is a pretty good chance we will see a 6 come up (to be exact it is $1-\left(\frac{5}{6}\right)^{15}=0.935$).
+
+This changes our strategy a lot. Theoretically, for each throw ranging from 1 die to 6 dice there is a threshold that tells us whether to keep that die or not. That threshold is different for every throw, starts high and gradually lowers. But just where might this threshhold lie?
+
 # Order statistics
 
-In the previous strategy, we only decided to keep sixes and fives. Could we improve our strategy by computing the expected value of the next turn based on number of dice kept? Let's try to estimate the maximal value thrown by n dice, since we only need to keep 1 die.
+This threshold is called the expected value. Expected value is the weighted average of all possible outcomes and shows us the average result of a throw or even a whole turn. We should start keeping numbers above expected value and try again with numbers below the expected value,
+
+In the previous strategy, we only decided to keep 6s and 5s. Could we improve our strategy by computing the expected value of the next throw based on number we throw with? Let's try to estimate the maximum value thrown by $n$ dice, since we only need to keep 1 die (logically, we want to keep the highest value from a throw).
 
 If we denote the $k$th order statistic ($k$th lowest element in the sample) as $X_{(k)}$, the probability that the element will equal some value $x$ is computed as
 
@@ -110,7 +116,45 @@ e_max <- function(n){
 }
 ```
 
+The `e_max()` function will give us the expected maximum value from throwing $n$dice. In 30s, the expected value of the $n$th order statistic (the maximum) look like this:
+
 ```{r}
+n_range <- 6:1
+expected_maxima <- round(e_max(n_range), digits = 2)
+data.frame(n = n_range, expected_maximum = expected_maxima)
+```
+
+However, the expected maximum value only accounts for 1 die.
+
+```{r}
+return_probs <- function(n){
+    probs <- c()
+    for (x in 1:6) {
+        Fx=x/6
+        fx=1/6
+        probs <- c(probs,(Fx**n - (Fx-fx)**n))
+    }
+    return(probs)
+}
+print(return_probs(2))
+```
+
+```{r}
+
+e_maxima <- c()
+last_max <- 3.5
+probs <- return_probs(2)
+e <- 0
+for (throw in 1:6) {
+        
+    sides <- 1:6
+    sides_alt <- sides
+    sides_alt[sides_alt<last_max] <- last_max
+    
+    top <- throw
+    
+    e <- e + (throw + sum(sides_alt[1:top])/(top))*probs[throw]
+}
 
 ```
 
@@ -119,8 +163,18 @@ turn_optimal <- function() {
     
     # We will compute expected maximal values for rolls with 1 to 6 dice
     e_maxima <- c()
+    last_max <- 0
+    
     for (i in 1:6) {
-        e_maxima <- c(e_maxima, e_max(i))
+        
+        sides <- 1:6
+        sides_alt <- sides
+        sides_alt[sides_alt<last_max] <- last_max
+        
+        probs <- return_probs(i)
+        
+        last_max <- cur_max
+        e_maxima <- c(e_maxima, cur_max)
     }
     
     dice_in_game <- 6
