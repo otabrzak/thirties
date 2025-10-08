@@ -159,23 +159,11 @@ for (throw in 1:6) {
 ```
 
 ```{r}
-turn_optimal <- function() {
+turn <- function(thresholds=c(5,5,5,5,5,5)) {
     
     # We will compute expected maximal values for rolls with 1 to 6 dice
-    e_maxima <- c()
-    last_max <- 0
-    
-    for (i in 1:6) {
-        
-        sides <- 1:6
-        sides_alt <- sides
-        sides_alt[sides_alt<last_max] <- last_max
-        
-        probs <- return_probs(i)
-        
-        last_max <- cur_max
-        e_maxima <- c(e_maxima, cur_max)
-    }
+    thresholds <- thresholds
+
     
     dice_in_game <- 6
     final_hand <- c()
@@ -198,7 +186,7 @@ turn_optimal <- function() {
             }
           
             # With more dice left in game, the threshold for keeping is higher
-            current_threshold <- e_maxima[length(throw)]
+            current_threshold <- thresholds[length(throw)]
             indices_to_keep <- which(throw >= current_threshold)
           
             # If we want actually want to keep any, we have found an improvement
@@ -220,18 +208,48 @@ turn_optimal <- function() {
         dice_in_game <- length(throw)
     }
   
-    return(final_hand)
+    return(sum(final_hand))
 }
+```
+
+# Brute force solution
+
+```{r}
+all_vectors <- expand.grid(rep(list(6:4), 6))
+
+valid_vectors <- all_vectors[apply(all_vectors, 1, function(x) all(diff(x) <= 0)), ]
+
+names(valid_vectors) <- paste0("V", 1:6)
+row.names(valid_vectors) <- NULL
+
+print(valid_vectors)
 ```
 
 ```{r}
 results <- c()
-for (i in 1:10000) {
-    results <- append(results, sum(turn_optimal()))
+
+quantiles_list <- list()
+
+vec_i = 1
+
+
+for (i in 1:nrow(valid_vectors)) {
+    
+    current_vector <- as.double(valid_vectors[i, ])
+    
+    sim_results <- replicate(10000, {
+        sum(turn(current_vector))
+    })
+    
+    current_quantiles <- quantile(sim_results)
+    quantiles_list[[i]] <- current_quantiles
+    
+    
+    cat("iteration", vec_i,"out of",nrow(valid_vectors), "\n")
+    vec_i = vec_i+1
 }
 
+quantiles_df <- as.data.frame(do.call(rbind, quantiles_list))
+quantiles_df$thresholds <- apply(valid_vectors,1, function(x) paste(x,collapse = ","))
 
-hist(results)
-quantile(results)
-mean(results)
 ```
