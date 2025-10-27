@@ -186,7 +186,7 @@ turn <- function(thresholds=c(5,5,5,5,5,5)) {
             }
           
             # With more dice left in game, the threshold for keeping is higher
-            current_threshold <- thresholds[length(throw)]
+            current_threshold <- thresholds[7-length(throw)]
             indices_to_keep <- which(throw >= current_threshold)
           
             # If we want actually want to keep any, we have found an improvement
@@ -219,21 +219,17 @@ all_vectors <- expand.grid(rep(list(6:4), 6))
 
 valid_vectors <- all_vectors[apply(all_vectors, 1, function(x) all(diff(x) <= 0)), ]
 
-names(valid_vectors) <- paste0("V", 1:6)
-row.names(valid_vectors) <- NULL
 
+valid_vectors <- cbind(valid_vectors, rep(0,nrow(valid_vectors)))
+names(valid_vectors) <- c(paste0("V", 1:6),"score")
+row.names(valid_vectors) <- NULL
 print(valid_vectors)
 ```
 
 ```{r}
-results <- c()
+n_vectors = nrow(valid_vectors)
 
-quantiles_list <- list()
-
-vec_i = 1
-
-
-for (i in 1:nrow(valid_vectors)) {
+for (i in 1:n_vectors) {
     
     current_vector <- as.double(valid_vectors[i, ])
     
@@ -241,17 +237,36 @@ for (i in 1:nrow(valid_vectors)) {
         sum(turn(current_vector))
     })
     
-    current_quantiles <- quantile(sim_results)
-    quantiles_list[[i]] <- current_quantiles
+    valid_vectors[i,"score"]=mean(sim_results)
     
-    
-    cat("iteration", vec_i,"out of",nrow(valid_vectors), "\n")
-    vec_i = vec_i+1
+    cat("iteration", i,"out of",n_vectors, "\n")
 }
 
-quantiles_df <- as.data.frame(do.call(rbind, quantiles_list))
-quantiles_df$thresholds <- apply(valid_vectors,1, function(x) paste(x,collapse = ","))
+print(valid_vectors)
 
+```
+
+```{r}
+sorted_vectors <- valid_vectors[order(valid_vectors$score, decreasing = TRUE), ]
+
+best_vectors <- head(sorted_vectors, 2)
+
+n_vectors = nrow(best_vectors)
+
+for (i in 1:n_vectors) {
+    
+    current_vector <- as.double(best_vectors[i, ])
+    
+    sim_results <- replicate(200000, {
+        sum(turn(current_vector))
+    })
+    
+    best_vectors[i,"score"]=mean(sim_results)
+    
+    cat("iteration", i,"out of",n_vectors, "\n")
+}
+
+print(best_vectors)
 ```
 
 # Genetic algorithm
@@ -263,7 +278,7 @@ Since this game has a very large ammount of outcomes, it would be super tedious 
 ```{r}
 make_population <- function(n) {
     
-    population <- replicate(n, 0.5 + sample(0:5, 6, replace = TRUE))
+    population <- replicate(n,sample(1:6, 6, replace = TRUE))
     
     
     population <- as.data.frame(t(population))
@@ -278,28 +293,154 @@ make_population <- function(n) {
     return(population)
 }
 
-n <- 100
-population <- make_population(n)
+
 ```
 
 ```{r}
-pop_i = 0
-
-evaluate_population <- function(population,pop_i){
-
-    for (chrom_i in 1:nrow(population)) {
+evaluate_population <- function(population,epoch, n_epochs, sampled_turns){
+    
+    n_chrom <- nrow(population)
+    
+    cat(paste("\n--- Evaluating Epoch:", epoch, "---\n"))
+    
+    pb <- txtProgressBar(min = 0, max=n_chrom, style = 3)
+    
+    for (chrom_i in 1:n_chrom) {
     
         chromosome <- as.double(population[chrom_i,1:6])
-    
-        sim_results <- replicate(1000,sum(turn(chromosome)))
+        
+        
+        repetitions <- ceiling(100 + (sampled_turns-100)*(epoch/n_epochs)^3)
+        sim_results <- replicate(repetitions,sum(turn(chromosome)))
         
         sim_score <- mean(sim_results)
         population$score[chrom_i] <- sim_score
         
-        cat("Population", pop_i, "- chromosome", chrom_i,"\n")
-        
+        setTxtProgressBar(pb, chrom_i)        
     }
+    close(pb)
+    cat("\n")
+    return(population)
 }
 
-evaluate_population(population = population, pop_i = pop_i)
+
+```
+
+```{r}
+crossover <- function(chromosome_x, chromosome_y, crossover_point ,prob_mutate){
+    
+    child <- c(chromosome_x[1:crossover_point], 
+               chromosome_y[(crossover_point + 1):6])
+    
+    if(runif(1)<=prob_mutate){
+        
+        mutation_index <- sample(1:6,1)
+        mutated_value <- child[mutation_index]
+        
+        if (mutated_value==1) {
+            child[mutation_index] <- 2
+        }
+        
+        else if (mutated_value==6) {
+            child[mutation_index] <- 5
+        }
+        else {
+            
+            if (runif(1)>0.5){
+                child[mutation_index] <- mutated_value -1
+            }
+            else{
+                                   child[mutation_index] <- mutated_value + 1 
+            }
+        }
+    }
+    return(child)
+}
+
+chx = c(1,1,1,1,1,1)
+chy = c(6,6,6,6,6,6)
+print(crossover(chx,chy,crossover_point = 3,prob_mutate = 0.1))
+```
+
+```{r}
+reproduce_population <- function(population){
+    
+    new_population <- list()
+    n <- nrow(population)
+    for (i in 1:n) {
+        
+        contestants_index <- sample(1:n, 4,replace = TRUE)
+        contestants <- population[contestants_index,]
+        
+        if (contestants$score[1]>contestants$score[2]) {
+            chromosome_x <- as.numeric(contestants[1,1:6])
+        }
+        else {
+            chromosome_x <- as.numeric(contestants[2,1:6])
+        }
+        
+        if (contestants$score[3]>contestants$score[4]) {
+            chromosome_y <- as.numeric(contestants[3,1:6])
+        }
+        else {
+            chromosome_y <- as.numeric(contestants[4,1:6]) 
+        }
+        child <- crossover(chromosome_x = chromosome_x,
+                           chromosome_y = chromosome_y,
+                           crossover_point = 3,
+                           prob_mutate = 0.1)
+        child <- c(child,0)
+        new_population[[i]] <- child
+    }
+    new_population <- as.data.frame(do.call(rbind,new_population))
+    colnames(new_population) <- colnames(population)
+    return(new_population)
+}
+```
+
+```{r}
+
+evolve <- function(n, n_epochs, sampled_turns, early_stop=5){
+    
+    best_chromosome <- c(0,0,0,0,0,0,0)
+    last_best_chromosome <- c(0,0,0,0,0,0,0)
+    i_early_stop <- 0
+
+    for (epoch in 1:n_epochs){
+        
+        if (epoch==1){
+            population <- make_population(n)
+        }
+        else {
+            population <- reproduce_population(population = population)
+        }
+        
+        population <- evaluate_population(population = population,
+                                          epoch = epoch,
+                                          n_epochs = n_epochs,
+                                          sampled_turns = sampled_turns)
+        
+        last_best_chromosome <- best_chromosome
+        best_chromosome <- as.numeric(population[which.max(population$score),])
+        cat("--- Best Chromosome:",
+            best_chromosome,
+            " ---","\n","\n","\n")
+        if(identical(last_best_chromosome[1:6],best_chromosome[1:6])){
+            i_early_stop <- i_early_stop +1
+        }
+        else {
+            i_early_stop <- 0
+        }
+        if (i_early_stop>=early_stop) {
+            cat("Stopping early, solution did not change for",i_early_stop,"epochs.","\n")
+            break
+        }
+    }
+    return(population)
+}
+
+evolved_population <- evolve(n = 100,
+                             n_epochs = 20,
+                             sampled_turns = 5000,
+                             early_stop = 5)
 ```
