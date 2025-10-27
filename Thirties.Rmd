@@ -253,3 +253,53 @@ quantiles_df <- as.data.frame(do.call(rbind, quantiles_list))
 quantiles_df$thresholds <- apply(valid_vectors,1, function(x) paste(x,collapse = ","))
 
 ```
+
+# Genetic algorithm
+
+We have already found a very decent solution through brute force, since in this case there are not that many options for the ideal solution. However, with higher number of options the time to find the optimal solution would grow exponentially (the brute force algorithm has complexity of $\mathcal{O}(2^n)$, which is absolutely horrible). Could there be another way of finding a solution?
+
+Since this game has a very large ammount of outcomes, it would be super tedious to solve analytically. We also do not have any continuous function to optimize, but we could try some sort of a genetic algorithm. For this small example it is a bit overkill, but it is a great learning experience and could help us validate our brute solution.
+
+```{r}
+make_population <- function(n) {
+    
+    population <- replicate(n, 0.5 + sample(0:5, 6, replace = TRUE))
+    
+    
+    population <- as.data.frame(t(population))
+    
+    col_names <- (c("T1","T2","T3","T4","T5","T6"))
+    colnames(population) <- col_names
+    population$score <- replicate(n,0)
+    
+    
+    
+        
+    return(population)
+}
+
+n <- 100
+population <- make_population(n)
+```
+
+```{r}
+pop_i = 0
+
+evaluate_population <- function(population,pop_i){
+
+    for (chrom_i in 1:nrow(population)) {
+    
+        chromosome <- as.double(population[chrom_i,1:6])
+    
+        sim_results <- replicate(1000,sum(turn(chromosome)))
+        
+        sim_score <- mean(sim_results)
+        population$score[chrom_i] <- sim_score
+        
+        cat("Population", pop_i, "- chromosome", chrom_i,"\n")
+        
+    }
+}
+
+evaluate_population(population = population, pop_i = pop_i)
+```
