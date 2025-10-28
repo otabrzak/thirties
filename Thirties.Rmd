@@ -25,7 +25,7 @@ The scoring is not too important in this analysis, let's just establish that we 
 
 Ok, a simple strategy would be to keep all the higher numbers and rethrow all the lower numbers. To keep it simple, let's set aside all 5's and 6's and look at what we get.
 
-```{r simple turn simulation, echo=FALSE}
+```{r simple turn simulation}
 # This function simulates a player's turn
 turn <- function() {
     
@@ -69,7 +69,7 @@ turn <- function() {
 }
 ```
 
-```{r showcase simple turn simulation, echo=FALSE}
+```{r showcase simple turn simulation}
 turn()
 ```
 
@@ -105,7 +105,7 @@ $$
 \
 To build a better strategy, we first need a theoretical baseline. We can use the order statistics to calculate the expected maximum value for a roll of *n* dice. This helps us understand what a "good" roll looks like.
 
-```{r function for expected maxima, echo=FALSE}
+```{r function for expected maxima}
 e_max <- function(n){
     e = 0
     for (x in 1:6) {
@@ -129,7 +129,7 @@ data.frame(n = n_range, expected_maximum = expected_maxima)
 
 For further simulation and examination of solutions, we will code a function that simulates a turn based on our strategy (a vector of 6 thresholds).
 
-```{r more complex turn simulation, echo=FALSE}
+```{r more complex turn simulation}
 turn <- function(thresholds) {
     
     # We will compute expected maximal values for rolls with 1 to 6 dice
@@ -195,7 +195,7 @@ If we think the actual space of possible solutions, in this case, it is not real
 
 Implementing all of these ideas, we are left with 28 vectors for which these rules are true.
 
-```{r creting solution vector space, echo=FALSE}
+```{r creting solution vector space}
 all_vectors <- expand.grid(rep(list(6:4), 6))
 
 valid_vectors <- all_vectors[apply(all_vectors, 1, function(x) all(diff(x) <= 0)), ]
@@ -231,7 +231,7 @@ print(valid_vectors)
 
 ```
 
-```{r plotting valid vector scores, echo=FALSE}
+```{r plotting valid vector scores}
 library(ggplot2)
 
 # Make sure 'score' is numeric
@@ -262,12 +262,13 @@ p1 <- ggplot(top_10_vectors, aes(x = reorder(threshold_label, score), y = score)
   ) +
   theme_light()
 
+print(p1)
 ggsave("bruteforce_results_plot.png", plot = p1, width = 8, height = 5)
 ```
 
 Since the scores still might be inaccurate, Let's pick top 3 solutions and simulate 1000000 turns for each one.
 
-```{r more accurate scoring, echo=FALSE}
+```{r more accurate scoring}
 sorted_vectors <- valid_vectors[order(valid_vectors$score, decreasing = TRUE), ]
 best_vectors <- head(sorted_vectors, 3)
 
@@ -307,7 +308,7 @@ Brute force worked here because the constrained search space (28 vectors) was sm
 In this case, we do not have any continuous function to optimize. Therefore, I implemented a genetic algorithm as a more scalable optimization method and to verify the brute-force result.
 
 
-```{r make_population, echo=FALSE}
+```{r make_population}
 make_population <- function(n) {
     
     population <- replicate(n,sample(1:6, 6, replace = TRUE))
@@ -323,7 +324,7 @@ make_population <- function(n) {
 }
 ```
 
-```{r evaluate_population, echo=FALSE}
+```{r evaluate_population}
 evaluate_population <- function(population,epoch, n_epochs, sampled_turns){
     
     n_chrom <- nrow(population)
@@ -353,7 +354,7 @@ evaluate_population <- function(population,epoch, n_epochs, sampled_turns){
 
 ```
 
-```{r crossover, echo=FALSE}
+```{r crossover}
 crossover <- function(chromosome_x, chromosome_y, crossover_point ,prob_mutate){
     
     child <- c(chromosome_x[1:crossover_point], 
@@ -389,7 +390,7 @@ chy = c(6,6,6,6,6,6)
 print(crossover(chx,chy,crossover_point = 3,prob_mutate = 0.1))
 ```
 
-```{r reproduce_population, echo=FALSE}
+```{r reproduce_population}
 reproduce_population <- function(population){
     
     new_population <- list()
@@ -425,7 +426,7 @@ reproduce_population <- function(population){
 }
 ```
 
-```{r create_evolution_plot, echo=FALSE}
+```{r create_evolution_plot}
 create_evolution_plot <- function(evolution_progress){
   library(ggplot2)
   p <- ggplot(evolution_progress, aes(x = epoch, y = epoch_avg_score)) +
@@ -453,7 +454,7 @@ create_evolution_plot <- function(evolution_progress){
 }
 ```
 
-```{r evolve, echo=FALSE, results = "hide"}
+```{r evolve, results = "hide"}
 
 evolve <- function(n, n_epochs, sampled_turns, early_stop=5){
     
@@ -533,7 +534,7 @@ cat("GA result:","\n",as.numeric(evolved_population[which.max(evolved_population
 
 Since the brute force result was scored by a much higher number of turns, it will be much more precise than the GA solution. We can even calculate the 95% confidence interval for the true expected score using this strategy, since we have a log of 1000000 simulations for the top strategy. From these, we can calculate the standard deviation, the z-scores and the bounds of the CI.
 
-```{r confidence intervals, echo=FALSE}
+```{r confidence intervals}
 # 1. Get the basic statistics from your results
 x_bar <- mean(best_sim_results)   # Sample Mean
 s <- sd(best_sim_results)         # Sample Standard Deviation
