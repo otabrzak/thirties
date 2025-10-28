@@ -224,8 +224,9 @@ for (i in 1:n_vectors) {
     
     cat("iteration", i,"out of",n_vectors, "\n")
 }
-
 ```
+
+
 ```{r showing valid vector scores}
 print(valid_vectors)
 
@@ -246,7 +247,7 @@ valid_vectors$threshold_label <- apply(valid_vectors[,1:6], 1, function(x) {
 top_10_vectors <- head(valid_vectors[order(valid_vectors$score, decreasing = TRUE), ], 10)
 
 # Create the plot
-ggplot(top_10_vectors, aes(x = reorder(threshold_label, score), y = score)) +
+p1 <- ggplot(top_10_vectors, aes(x = reorder(threshold_label, score), y = score)) +
   geom_bar(stat = "identity", fill = "#0073C2") +
   geom_text(aes(label = round(score, 2)), hjust = 1.2, color = "white", fontface = "bold") +
   
@@ -261,6 +262,8 @@ ggplot(top_10_vectors, aes(x = reorder(threshold_label, score), y = score)) +
     y = "Average Score"
   ) +
   theme_minimal()
+
+ggsave("bruteforce_results_plot.png", plot = p1, width = 8, height = 5)
 ```
 
 
@@ -424,6 +427,7 @@ reproduce_population <- function(population){
 
 ```{r create_evolution_plot}
 create_evolution_plot <- function(evolution_progress){
+  library(ggplot2)
   p <- ggplot(evolution_progress, aes(x = epoch, y = epoch_avg_score)) +
       
       # Add a blue line, make it slightly thicker
@@ -484,20 +488,22 @@ evolve <- function(n, n_epochs, sampled_turns, early_stop=5){
         else {
             i_early_stop <- 0
         }
+        
+        evolution_progress[[epoch]] <- c(epoch,mean(population$score))
+        
         if (i_early_stop>=early_stop) {
             cat("Stopping early, solution did not change for",i_early_stop,"epochs.","\n")
             break
         }
-        evolution_progress[[epoch]] <- c(epoch,mean(population$score))
     }
     
     evolution_progress <- as.data.frame(do.call(rbind,evolution_progress))
     colnames(evolution_progress) <- c("epoch","epoch_avg_score")
-    p <- create_evolution_plot(evolution_progress = evolution_progress)
-    print(p)
-    ggsave("evolution_results_plot.png", plot = p, width = 8, height = 5)
+    p2 <- create_evolution_plot(evolution_progress = evolution_progress)
+    print(p2)
+    ggsave("evolution_results_plot.png", plot = p2, width = 8, height = 5)
     
-    return(list("population"=population, "p"=p))
+    return(list("population"=population, "p2"=p2))
 }
 
 evolution <- evolve(n = 100,
@@ -508,9 +514,9 @@ evolution <- evolve(n = 100,
 ```
 
 ```{r plotting the evolution}
-p <- evolution$p
+p2 <- evolution$p2
 evolved_population <- evolution$population
-print(p)
+print(p2)
 ```
 
 
