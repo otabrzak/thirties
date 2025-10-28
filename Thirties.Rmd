@@ -13,19 +13,19 @@ options(scipen=10) # Print 0.00513 instead of 5.13e-03.
 
 # The rules of the game
 
-For this game analysis, I will be using slightly modiffied rules of the dice game 30s. The rules go like this: player starts with 30 lives and the players take turns clockwise. At the start of a turn, a player gets 6 dice. The goal of a player's turn is to throw the highest sum of all dice, which can be 36 at best.
+For this game analysis, I will be using slightly modified rules of the dice game 30s. The rules go like this: player starts with 30 lives and the players take turns clockwise. At the start of a turn, a player gets 6 dice. The goal of a player's turn is to throw the highest sum of all dice, which can be 36 at best.
 
 The turn goes like this: the player throws all dice and has to set aside at least 1 of them. After he sets some dice aside (1 or more), he throws the rest of them again and repeats the process (sets at least 1 ř aside, throws the rest again), until there are no dice to throw and all are set aside. Since each throw contains at least 1 less die than the previous, the player can throw as many as 6 times in a turn.
 
 After the final throw, the dice are summed up. If the result is lower than 30 (this is a recurring number in this game, as the name suggests), difference from 30 is subtracted from the player's lives (if I throw a 27, I lose 3 lives). If the result is higher than 30, the surplus over 30 is subtracted from the lives of the player on the left (if I throw a 35, the player on my left loses 5 lives). The last player with any lives left wins.
 
-The scoring is not too important in this analysis, let's just estabilish that we want to find a strategy, that gets us as much above 30 as possible (ideally as close to 36 as possible). Let's now try to find it!
+The scoring is not too important in this analysis, let's just establish that we want to find a strategy, that gets us as much above 30 as possible (ideally as close to 36 as possible). Let's now try to find it!
 
 # Simplest strategy
 
 Ok, a simple strategy would be to keep all the higher numbers and rethrow all the lower numbers. To keep it simple, let's set aside all 5's and 6's and look at what we get.
 
-```{r simple turn simulation}
+```{r simple turn simulation, echo=FALSE}
 # This function simulates a player's turn
 turn <- function() {
     
@@ -69,7 +69,7 @@ turn <- function() {
 }
 ```
 
-```{r showcase simple turn simulation}
+```{r showcase simple turn simulation, echo=FALSE}
 turn()
 ```
 
@@ -105,7 +105,7 @@ $$
 \
 To build a better strategy, we first need a theoretical baseline. We can use the order statistics to calculate the expected maximum value for a roll of *n* dice. This helps us understand what a "good" roll looks like.
 
-```{r function for expected maxima}
+```{r function for expected maxima, echo=FALSE}
 e_max <- function(n){
     e = 0
     for (x in 1:6) {
@@ -129,7 +129,7 @@ data.frame(n = n_range, expected_maximum = expected_maxima)
 
 For further simulation and examination of solutions, we will code a function that simulates a turn based on our strategy (a vector of 6 thresholds).
 
-```{r more complex turn simulation}
+```{r more complex turn simulation, echo=FALSE}
 turn <- function(thresholds) {
     
     # We will compute expected maximal values for rolls with 1 to 6 dice
@@ -191,7 +191,7 @@ If we think the actual space of possible solutions, in this case, it is not real
 
 2.  Even with 1 die, we expect to roll 3.5 on average. That means that with 1 or more dice still in play (this is true constantly), we should not settle with anything less than a 4. This cuts the number of possible solutions in half (we only settle for 4s, 5s, or 6s).
 
-3.  Our expected value from a single throw goes down with the ammount of dice in that throw. By this idea we can ignore all threshold vectors, in which any value in position i is greater than the value in position i-1.
+3.  Our expected value from a single throw goes down with the amount of dice in that throw. By this idea we can ignore all threshold vectors, in which any value in position i is greater than the value in position i-1.
 
 Implementing all of these ideas, we are left with 28 vectors for which these rules are true.
 
@@ -225,7 +225,6 @@ for (i in 1:n_vectors) {
     cat("iteration", i,"out of",n_vectors, "\n")
 }
 ```
-
 
 ```{r showing valid vector scores}
 print(valid_vectors)
@@ -261,11 +260,10 @@ p1 <- ggplot(top_10_vectors, aes(x = reorder(threshold_label, score), y = score)
     x = "Threshold Vector (Dice: 6, 5, 4, 3, 2, 1)",
     y = "Average Score"
   ) +
-  theme_minimal()
+  theme_light()
 
 ggsave("bruteforce_results_plot.png", plot = p1, width = 8, height = 5)
 ```
-
 
 Since the scores still might be inaccurate, Let's pick top 3 solutions and simulate 1000000 turns for each one.
 
@@ -302,12 +300,14 @@ print(best_vectors)
 Ok, looks like we have our solution!!! There are 2 vectors performing nearly identically with only very slight differences in scoring: $[6,6,6,5,5,4]$ and $[6,6,6,6,5,4]$.
 
 # Genetic algorithm
-
 We have already found the top solution through brute force. However, with higher number of options the time to find the optimal solution would grow exponentially (the brute force algorithm has complexity of $\mathcal{O}(2^n)$, which is absolutely horrible). Could there be another way of finding a solution?
 
-Since this game has a very large ammount of outcomes, it would be super tedious to solve analytically. We also do not have any continuous function to optimize, but we could try some sort of a genetic algorithm. For this small example it is a bit overkill, but it is a great learning experience and could help us validate our brute force solution.
+Brute force worked here because the constrained search space (28 vectors) was small. For more complex scenarios (e.g., allowing lower thresholds), this approach becomes computationally overwhelming. Since this game has a very large ammount of outcomes, it would be super tedious to solve analytically. The way to go here is to look into a more efficient optimization algorithm. 
 
-```{r make_population}
+In this case, we do not have any continuous function to optimize. Therefore, I implemented a genetic algorithm as a more scalable optimization method and to verify the brute-force result.
+
+
+```{r make_population, echo=FALSE}
 make_population <- function(n) {
     
     population <- replicate(n,sample(1:6, 6, replace = TRUE))
@@ -323,7 +323,7 @@ make_population <- function(n) {
 }
 ```
 
-```{r evaluate_population}
+```{r evaluate_population, echo=FALSE}
 evaluate_population <- function(population,epoch, n_epochs, sampled_turns){
     
     n_chrom <- nrow(population)
@@ -353,7 +353,7 @@ evaluate_population <- function(population,epoch, n_epochs, sampled_turns){
 
 ```
 
-```{r crossover}
+```{r crossover, echo=FALSE}
 crossover <- function(chromosome_x, chromosome_y, crossover_point ,prob_mutate){
     
     child <- c(chromosome_x[1:crossover_point], 
@@ -389,7 +389,7 @@ chy = c(6,6,6,6,6,6)
 print(crossover(chx,chy,crossover_point = 3,prob_mutate = 0.1))
 ```
 
-```{r reproduce_population}
+```{r reproduce_population, echo=FALSE}
 reproduce_population <- function(population){
     
     new_population <- list()
@@ -425,7 +425,7 @@ reproduce_population <- function(population){
 }
 ```
 
-```{r create_evolution_plot}
+```{r create_evolution_plot, echo=FALSE}
 create_evolution_plot <- function(evolution_progress){
   library(ggplot2)
   p <- ggplot(evolution_progress, aes(x = epoch, y = epoch_avg_score)) +
@@ -453,7 +453,7 @@ create_evolution_plot <- function(evolution_progress){
 }
 ```
 
-```{r evolve, echo = TRUE, results = "hide"}
+```{r evolve, echo=FALSE, results = "hide"}
 
 evolve <- function(n, n_epochs, sampled_turns, early_stop=5){
     
@@ -500,9 +500,6 @@ evolve <- function(n, n_epochs, sampled_turns, early_stop=5){
     evolution_progress <- as.data.frame(do.call(rbind,evolution_progress))
     colnames(evolution_progress) <- c("epoch","epoch_avg_score")
     p2 <- create_evolution_plot(evolution_progress = evolution_progress)
-    print(p2)
-    ggsave("evolution_results_plot.png", plot = p2, width = 8, height = 5)
-    
     return(list("population"=population, "p2"=p2))
 }
 
@@ -517,21 +514,25 @@ evolution <- evolve(n = 100,
 p2 <- evolution$p2
 evolved_population <- evolution$population
 print(p2)
+ggsave("evolution_results_plot.png", plot = p2, width = 8, height = 5)
 ```
-
 
 # Conclusions
 
-We found that there are 2 virtually identically performing optimal strategis for this game: $[6,6,6,5,5,4]$ and $[6,6,6,6,5,4]$. The brute force search with a very high number of simulations always converges near 1 of these options. However, the genetic algorithm uses a much lower number of simulations for scoring to for approximate scoring and speeding up the process. Because of that, the optimum found by the genetic algorithm may vary slightly and both algorithms will likely return different scores due to the difference of simulation length.
+Both the brute force simulation (after 1 million runs per top strategy) and the genetic algorithm converged on the optimal strategy: $[6, 6, 6, 5, 5, 4]$, yielding an average score of approximately 30.10. This convergence validates both methods. The brute force search with a very high number of simulations always converges, however, the genetic algorithm uses a much lower number of simulations for scoring to for approximate scoring and speeding up the process. Because of that, the optimum found by the genetic algorithm may vary slightly and both algorithms will likely return different scores due to the difference of simulation length.
 
 ## Comparing the solutions
+
 We print out both of our best solutions and compare them.
+
 ```{r algorithm comparison}
 cat("Brute force result:","\n",as.numeric((best_vectors[which.max(best_vectors$score),1:7])))
 cat("\n","\n")
 cat("GA result:","\n",as.numeric(evolved_population[which.max(evolved_population$score),]))
 ```
-Since the brute force result was scored by a much higher number of turns, it will be muhc more precise than the GA solution. We can even calculate the 95% confidence interval for the true expected score using this strategy.
+
+Since the brute force result was scored by a much higher number of turns, it will be much more precise than the GA solution. We can even calculate the 95% confidence interval for the true expected score using this strategy, since we have a log of 1000000 simulations for the top strategy. From these, we can calculate the standard deviation, the z-scores and the bounds of the CI.
+
 ```{r confidence intervals, echo=FALSE}
 # 1. Get the basic statistics from your results
 x_bar <- mean(best_sim_results)   # Sample Mean
@@ -558,4 +559,3 @@ upper_bound <- x_bar + margin_of_error
 cat(paste("95% CI: [", round(lower_bound, 3), ",", round(upper_bound, 3), "]\n"))
 
 ```
-
