@@ -55,7 +55,7 @@ Two primary methods were used to find the optimal strategy:
 
 The brute-force simulation identified the top-performing strategies:
 
-![Top 15 Strategies from Brute-Force Simulation](bruteforce_results_plot.png)
+![Top Strategies from Brute-Force Simulation](bruteforce_results_plot.png)
 
 ### Genetic Algorithm Evolution
 
