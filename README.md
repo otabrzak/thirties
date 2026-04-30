@@ -71,7 +71,7 @@ The GA successfully converged towards the same optimal strategy found by the bru
 
 For the detailed methodology, code implementation, probability theory, and complete results, please see the full R Markdown report:
 
-* **[View the Full Report (Thirties.html)](Thirties.html)**
+* **[View the Full Report (Thirties.html)](Thirties.pdf)**
 
 ---
 
