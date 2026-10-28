@@ -1,10 +1,10 @@
-# Thirties: Finding the Optimal Strategy in a Dice Game 🎲
+# Thirties: Finding the Optimal Strategy in a Dice Game
 
 This R project explores optimal strategies for the dice game "Thirties" using simulation and optimization techniques. It demonstrates skills in R programming, Monte Carlo simulation, probability (order statistics), and genetic algorithms.
 
 ---
 
-## 🏆 Key Finding: The Optimal Strategy 🏆
+## Key Finding: The Optimal Strategy
 
 The analysis identified the optimal strategy as using the threshold vector **`[6, 6, 6, 5, 5, 4]`**.
 
@@ -22,7 +22,7 @@ This strategy yields an average score of approximately **30.10** per turn (based
 
 ---
 
-## 📖 The Game: Thirties
+## The Game: Thirties
 
 * Players start with 30 lives.
 * On their turn, a player rolls 6 dice.
@@ -33,7 +33,7 @@ This strategy yields an average score of approximately **30.10** per turn (based
 
 ---
 
-## 🛠️ Methodology
+## Methodology
 
 Two primary methods were used to find the optimal strategy:
 
@@ -49,7 +49,7 @@ Two primary methods were used to find the optimal strategy:
 
 ---
 
-## 📊 Results
+## Results
 
 ### Brute-Force Simulation Results
 
@@ -67,7 +67,7 @@ The GA successfully converged towards the same optimal strategy found by the bru
 
 ---
 
-## 🔬 Full Analysis Report
+## Full Analysis Report
 
 For the detailed methodology, code implementation, probability theory, and complete results, please see the full R Markdown report:
 
@@ -75,7 +75,7 @@ For the detailed methodology, code implementation, probability theory, and compl
 
 ---
 
-## 🚀 How to Run
+## How to Run
 
 1.  Clone this repository.
 2.  Open `Thirties.Rmd` in RStudio.
